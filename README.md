@@ -1,3 +1,7 @@
+This is a fork of the `merge-styles` package from Office UI Fabric for React Native.
+
+**Work in progress! Do not use yet!**
+
 # [merge-styles](http://dev.office.com/fabric)
 
 The `merge-styles` library provides utilities for loading styles through javascript. It is designed to make it simple to style components through javascript. It generates css classes, rather than using inline styling, to ensure we can use css features like pseudo selectors (:hover) and parent/child selectors (media queries).
