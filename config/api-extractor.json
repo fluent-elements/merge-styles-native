@@ -7,7 +7,12 @@
     "namespaceSupport": "conservative"
   },
   "project": {
-    "entryPointSourceFile": "lib/index.d.ts"
+    "entryPointSourceFile": "types/index.d.ts"
+  },
+  "apiReviewFile": {
+      "enabled": true,
+      "apiReviewFolder": "./api",
+      "tempFolder": "./etc"
   },
   "validationRules": {
     "missingReleaseTags": "allow"

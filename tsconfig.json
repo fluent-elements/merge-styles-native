@@ -2,7 +2,8 @@
   "compilerOptions": {
     "target": "es5",
     "outDir": "lib",
-    "module": "commonjs",
+    "declarationDir": "types",
+    "module": "es2015",
     "lib": ["es2017", "dom"],
     "jsx": "react",
     "declaration": true,
