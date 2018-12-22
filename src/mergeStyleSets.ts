@@ -104,7 +104,7 @@ export function mergeStyleSets(...styleSets: Array<IStyleSet<any> | undefined | 
 
   let concatenatedStyleSet: IConcatenatedStyleSet<any> | IStyleSet<any> =
     // we have guarded against falsey values just above.
-    styleSet!;
+    styleSet as IConcatenatedStyleSet<any> | IStyleSet<any>;
 
   concatenatedStyleSet = concatStyleSets(...styleSets);
 

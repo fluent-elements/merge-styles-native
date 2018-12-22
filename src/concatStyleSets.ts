@@ -1,6 +1,6 @@
 import { IStyleSet, IConcatenatedStyleSet } from './IStyleSet';
 import { IStyleBase, IStyle } from './IStyle';
-import { IStyleFunctionOrObject } from './IStyleFunction';
+import { IStyleFunction, IStyleFunctionOrObject } from './IStyleFunction';
 
 /**
  * Combine a set of styles together (but does not register css classes).
@@ -188,8 +188,11 @@ export function concatStyleSets(...styleSets: (IStyleSet<any> | false | null | u
         mergedSubStyles[subCompProp] = (styleProps: any) => {
           return concatStyleSets(
             ...workingSet.map(
+              // https://github.com/Microsoft/TypeScript/wiki/Breaking-Changes#narrowing-functions-now-intersects--object-and-unconstrained-generic-type-parameters
               (styleFunctionOrObject: IStyleFunctionOrObject<any, any>) =>
-                typeof styleFunctionOrObject === 'function' ? styleFunctionOrObject(styleProps) : styleFunctionOrObject
+                typeof styleFunctionOrObject === 'function'
+                  ? (styleFunctionOrObject as IStyleFunction<any, any>)(styleProps)
+                  : styleFunctionOrObject
             )
           );
         };
