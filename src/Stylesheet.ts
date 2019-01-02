@@ -1,7 +1,11 @@
 // tslint:disable-next-line:no-any
 declare const process: { [key: string]: any };
 
+import { RegisteredStyle, StyleSheet as StyleSheetNative } from 'react-native';
+
 import { IStyle } from './IStyle';
+
+export type NativeStyle = { rules: { [key: string]: any } };
 
 export const InjectionMode = {
   /**
@@ -47,7 +51,7 @@ export interface IStyleSheetConfig {
   /**
    * Callback executed when a rule is inserted.
    */
-  onInsertRule?: (rule: string) => void;
+  onInsertRule?: (rules: { [key: string]: any }) => void;
 }
 
 const STYLESHEET_SETTING = '__stylesheet__';
@@ -66,16 +70,14 @@ let _stylesheet: Stylesheet;
 export class Stylesheet {
   private _lastStyleElement?: HTMLStyleElement;
   private _styleElement?: HTMLStyleElement;
-  private _rules: string[] = [];
-  private _preservedRules: string[] = [];
+  private _rules: { className: string, rules: { [key: string]: any } }[] = [];
   private _config: IStyleSheetConfig;
-  private _rulesToInsert: string[] = [];
   private _counter = 0;
   private _keyToClassName: { [key: string]: string } = {};
   private _onResetCallbacks: (() => void)[] = [];
 
   // tslint:disable-next-line:no-any
-  private _classNameToArgs: { [key: string]: { args: any; rules: string[] } } = {};
+  private _classNameToArgs: { [key: string]: { args: any; rules: { [key: string]: string }, nativeStyle?: NativeStyle } } = {};
 
   /**
    * Gets the singleton instance.
@@ -139,11 +141,12 @@ export class Stylesheet {
    * Used internally to cache information about a class which was
    * registered with the stylesheet.
    */
-  public cacheClassName(className: string, key: string, args: IStyle[], rules: string[]): void {
+  public cacheClassName(className: string, key: string, args: IStyle[], rules: { [key: string]: string }, nativeStyle?: NativeStyle): void {
     this._keyToClassName[key] = className;
     this._classNameToArgs[className] = {
       args,
-      rules
+      rules,
+      nativeStyle
     };
   }
 
@@ -166,60 +169,66 @@ export class Stylesheet {
   }
 
   /**
+   * Gets the React Native style associated with a given classname which was
+   * previously registered using cacheClassName.
+   */
+  public styleFromClassName(className: string): RegisteredStyle<any> | undefined {
+    const entry = this._classNameToArgs[className];
+
+    return entry && entry.nativeStyle && entry.nativeStyle.rules as any;
+  }
+
+  /**
    * Gets the arguments associated with a given classname which was
    * previously registered using cacheClassName.
    */
-  public insertedRulesFromClassName(className: string): string[] | undefined {
+  public insertedRulesFromClassName(className: string): { [key: string]: any } | undefined {
     const entry = this._classNameToArgs[className];
 
     return entry && entry.rules;
   }
 
   /**
-   * Inserts a css rule into the stylesheet.
-   * @param preserve - Preserves the rule beyond a reset boundary.
+   * Creates a React Native style.
    */
-  public insertRule(rule: string, preserve?: boolean): void {
-    const { injectionMode } = this._config;
-    const element = injectionMode !== InjectionMode.none ? this._getStyleElement() : undefined;
+  public createStyle(className: string, rules: { [key: string]: any }): NativeStyle | undefined {
 
-    if (preserve) {
-      this._preservedRules.push(rule);
+    let nativeStyle: NativeStyle | undefined;
+
+    switch (this._config.injectionMode) {
+      case InjectionMode.insertNode:
+      case InjectionMode.appendChild:
+        try {
+          nativeStyle = StyleSheetNative.create({ rules });
+        } catch (e) {
+          // The browser will throw exceptions on unsupported rules (such as a moz prefix in webkit.)
+          // We need to swallow the exceptions for this scenario, otherwise we'd need to filter
+          // which could be slower and bulkier.
+        }
+        break;
     }
 
-    if (element) {
-      switch (this._config.injectionMode) {
-        case InjectionMode.insertNode:
-          const { sheet } = element!;
-
-          try {
-            (sheet as CSSStyleSheet).insertRule(rule, (sheet as CSSStyleSheet).cssRules.length);
-          } catch (e) {
-            // The browser will throw exceptions on unsupported rules (such as a moz prefix in webkit.)
-            // We need to swallow the exceptions for this scenario, otherwise we'd need to filter
-            // which could be slower and bulkier.
-          }
-          break;
-
-        case InjectionMode.appendChild:
-          element.appendChild(document.createTextNode(rule));
-          break;
-      }
-    } else {
-      this._rules.push(rule);
-    }
+    this._rules.push({ className, rules });
 
     if (this._config.onInsertRule) {
-      this._config.onInsertRule(rule);
+      this._config.onInsertRule(rules);
     }
+
+    return nativeStyle;
   }
 
   /**
-   * Gets all rules registered with the stylesheet; only valid when
-   * using InsertionMode.none.
+   * Gets all rules registered with the stylesheet in a CSS readable format.
    */
-  public getRules(includePreservedRules?: boolean): string {
-    return (includePreservedRules ? this._preservedRules.join('') : '') + this._rules.join('') + this._rulesToInsert.join('');
+  public getRules(): string {
+    return this._rules.map(
+      rule => Object.keys(rule.rules).length > 0 ? '.' + rule.className + 
+        JSON.stringify(rule.rules)
+          .replace(/([A-Z])/g, '-$1').toLowerCase()
+          .replace(/"/g, '')
+          .replace(/,/g, ';')
+          .replace(/}/g, ';}') : ''
+    ).join('');
   }
 
   /**
@@ -228,7 +237,6 @@ export class Stylesheet {
    */
   public reset(): void {
     this._rules = [];
-    this._rulesToInsert = [];
     this._counter = 0;
     this._classNameToArgs = {};
     this._keyToClassName = {};

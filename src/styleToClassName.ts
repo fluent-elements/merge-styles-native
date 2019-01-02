@@ -8,6 +8,102 @@ import { rtlifyRules } from './transforms/rtlifyRules';
 
 const DISPLAY_NAME = 'displayName';
 
+const REACT_NATIVE_PROPS = [
+  'alignContent',
+  'alignItems',
+  'alignSelf',
+  'aspectRatio',
+  'backfaceVisibility',
+  'backgroundColor',
+  'borderBottomColor',
+  'borderBottomLeftRadius',
+  'borderBottomRightRadius',
+  'borderBottomWidth',
+  'borderColor',
+  'borderLeftColor',
+  'borderLeftWidth',
+  'borderRadius',
+  'borderRightColor',
+  'borderRightWidth',
+  'borderStyle',
+  'borderTopColor',
+  'borderTopLeftRadius',
+  'borderTopRightRadius',
+  'borderTopWidth',
+  'borderWidth',
+  'bottom',
+  'color',
+  'decomposedMatrix',
+  'direction',
+  'display',
+  'elevation',
+  'flex',
+  'flexBasis',
+  'flexDirection',
+  'flexGrow',
+  'flexShrink',
+  'flexWrap',
+  'fontFamily',
+  'fontSize',
+  'fontStyle',
+  'fontVariant',
+  'fontWeight',
+  'height',
+  'includeFontPadding',
+  'justifyContent',
+  'left',
+  'letterSpacing',
+  'lineHeight',
+  'margin',
+  'marginBottom',
+  'marginHorizontal',
+  'marginLeft',
+  'marginRight',
+  'marginTop',
+  'marginVertical',
+  'maxHeight',
+  'maxWidth',
+  'minHeight',
+  'minWidth',
+  'opacity',
+  'overflow',
+  'overlayColor',
+  'padding',
+  'paddingBottom',
+  'paddingHorizontal',
+  'paddingLeft',
+  'paddingRight',
+  'paddingTop',
+  'paddingVertical',
+  'position',
+  'resizeMode',
+  'right',
+  'rotation',
+  'scaleX',
+  'scaleY',
+  'shadowColor',
+  'shadowOffset',
+  'shadowOpacity',
+  'shadowRadius',
+  'textAlign',
+  'textAlignVertical',
+  'textDecorationColor',
+  'textDecorationLine',
+  'textDecorationStyle',
+  'textShadowColor',
+  'textShadowOffset',
+  'textShadowRadius',
+  'tintColor',
+  'top',
+  'transform',
+  'transformMatrix',
+  'translateX',
+  'translateY',
+  'width',
+  'writingDirection',
+  'zIndex'
+];
+
 // tslint:disable-next-line:no-any
 type IDictionary = { [key: string]: any };
 
@@ -16,10 +112,11 @@ interface IRuleSet {
   [key: string]: IDictionary;
 }
 
-function getDisplayName(rules?: { [key: string]: IRawStyle }): string | undefined {
-  const rootStyle: IStyle = rules && rules['&'];
+// tslint:disable-next-line:no-any
+type IRules = { [key: string]: any };
 
-  return rootStyle ? (rootStyle as IRawStyle).displayName : undefined;
+function getDisplayName(rules?: IRawStyle): string | undefined {
+  return rules ? rules[DISPLAY_NAME] : undefined;
 }
 
 function expandSelector(newSelector: string, currentSelector: string): string {
@@ -34,15 +131,8 @@ function expandSelector(newSelector: string, currentSelector: string): string {
   return newSelector;
 }
 
-function extractRules(args: IStyle[], rules: IRuleSet = { __order: [] }, currentSelector: string = '&'): IRuleSet {
+function extractRules(args: IStyle[], rules: IRules = { }): IRules {
   const stylesheet = Stylesheet.getInstance();
-  let currentRules: IDictionary | undefined = rules[currentSelector] as IDictionary;
-
-  if (!currentRules) {
-    currentRules = {};
-    rules[currentSelector] = currentRules;
-    rules.__order.push(currentSelector);
-  }
 
   for (const arg of args) {
     // If the arg is a string, we need to look up the class map and merge.
@@ -50,48 +140,26 @@ function extractRules(args: IStyle[], rules: IRuleSet = { __order: [] }, current
       const expandedRules = stylesheet.argsFromClassName(arg);
 
       if (expandedRules) {
-        extractRules(expandedRules, rules, currentSelector);
+        extractRules(expandedRules, rules);
       }
       // Else if the arg is an array, we need to recurse in.
     } else if (Array.isArray(arg)) {
-      extractRules(arg, rules, currentSelector);
+      extractRules(arg, rules);
     } else {
       // tslint:disable-next-line:no-any
       for (const prop in arg as any) {
         if (prop === 'selectors') {
-          // tslint:disable-next-line:no-any
-          const selectors: { [key: string]: IStyle } = (arg as any).selectors;
-
-          for (let newSelector in selectors) {
-            if (selectors.hasOwnProperty(newSelector)) {
-              const selectorValue = selectors[newSelector];
-
-              if (newSelector.indexOf('@') === 0) {
-                newSelector = newSelector + '{' + currentSelector;
-                extractRules([selectorValue], rules, newSelector);
-              } else if (newSelector.indexOf(',') > -1) {
-                const commaSeparatedSelectors = newSelector.split(/,/g).map((s: string) => s.trim());
-                extractRules(
-                  [selectorValue],
-                  rules,
-                  commaSeparatedSelectors
-                    .map((commaSeparatedSelector: string) => expandSelector(commaSeparatedSelector, currentSelector))
-                    .join(', ')
-                );
-              } else {
-                extractRules([selectorValue], rules, expandSelector(newSelector, currentSelector));
-              }
-            }
-          }
+          // Skip selectors - not used in React Native
+          // tslint:disable-next-line:no-empty
         } else {
           if ((arg as any)[prop] !== undefined) {
-            // Else, add the rule to the currentSelector.
+            // Else, add the rule.
             if (prop === 'margin' || prop === 'padding') {
               // tslint:disable-next-line:no-any
-              expandQuads(currentRules, prop, (arg as any)[prop]);
-            } else {
+              expandQuads(rules, prop, (arg as any)[prop]);
+            } else if (prop === DISPLAY_NAME || binarySearch(REACT_NATIVE_PROPS, prop) !== -1) {
               // tslint:disable-next-line:no-any
-              (currentRules as any)[prop] = (arg as any)[prop] as any;
+              rules[prop] = (arg as any)[prop] as any;
             }
           }
         }
@@ -102,7 +170,7 @@ function extractRules(args: IStyle[], rules: IRuleSet = { __order: [] }, current
   return rules;
 }
 
-function expandQuads(currentRules: IDictionary, name: string, value: string): void {
+function expandQuads(currentRules: IRules, name: string, value: string): void {
   const parts = typeof value === 'string' ? value.split(' ') : [value];
 
   currentRules[name + 'Top'] = parts[0];
@@ -111,19 +179,14 @@ function expandQuads(currentRules: IDictionary, name: string, value: string): vo
   currentRules[name + 'Left'] = parts[3] || parts[1] || parts[0];
 }
 
-function getKeyForRules(rules: IRuleSet): string | undefined {
+function getKeyForRules(rules: IRules): string | undefined {
   const serialized: string[] = [];
   let hasProps = false;
 
-  for (const selector of rules.__order) {
-    serialized.push(selector);
-    const rulesForSelector = rules[selector];
-
-    for (const propName in rulesForSelector) {
-      if (rulesForSelector.hasOwnProperty(propName) && rulesForSelector[propName] !== undefined) {
-        hasProps = true;
-        serialized.push(propName, rulesForSelector[propName]);
-      }
+  for (const propName in rules) {
+    if (rules.hasOwnProperty(propName) && rules[propName] !== undefined) {
+      hasProps = true;
+      serialized.push(propName, rules[propName]);
     }
   }
 
@@ -163,11 +226,11 @@ export interface IRegistration {
   className: string;
   key: string;
   args: IStyle[];
-  rulesToInsert: string[];
+  rulesToInsert: IRules;
 }
 
 export function styleToRegistration(...args: IStyle[]): IRegistration | undefined {
-  const rules: IRuleSet = extractRules(args);
+  const rules = extractRules(args);
   const key = getKeyForRules(rules);
 
   if (key) {
@@ -179,13 +242,12 @@ export function styleToRegistration(...args: IStyle[]): IRegistration | undefine
     };
 
     if (!registration.className) {
-      registration.className = stylesheet.getClassName(getDisplayName(rules));
-      const rulesToInsert: string[] = [];
-
-      for (const selector of rules.__order) {
-        rulesToInsert.push(selector, serializeRuleEntries(rules[selector]));
+      const displayName = getDisplayName(rules);
+      registration.className = stylesheet.getClassName(displayName);
+      if (rules && displayName) {
+        delete rules[DISPLAY_NAME];
       }
-      registration.rulesToInsert = rulesToInsert;
+      registration.rulesToInsert = rules;
     }
 
     return registration as IRegistration;
@@ -197,32 +259,8 @@ export function applyRegistration(registration: IRegistration, classMap?: { [key
   const { className, key, args, rulesToInsert } = registration;
 
   if (rulesToInsert) {
-    // rulesToInsert is an ordered array of selector/rule pairs.
-    for (let i = 0; i < rulesToInsert.length; i += 2) {
-      const rules = rulesToInsert[i + 1];
-      if (rules) {
-        let selector = rulesToInsert[i];
-
-        // Fix selector using map.
-        selector = selector.replace(
-          /(&)|\$([\w-]+)\b/g,
-          (match: string, amp: string, cn: string): string => {
-            if (amp) {
-              return '.' + registration.className;
-            } else if (cn) {
-              return '.' + ((classMap && classMap[cn]) || cn);
-            }
-            return '';
-          }
-        );
-
-        // Insert. Note if a media query, we must close the query with a final bracket.
-        const processedRule = `${selector}{${rules}}${selector.indexOf('@') === 0 ? '}' : ''}`;
-
-        stylesheet.insertRule(processedRule);
-      }
-    }
-    stylesheet.cacheClassName(className!, key!, args!, rulesToInsert);
+    const style = stylesheet.createStyle(className, rulesToInsert);
+    stylesheet.cacheClassName(className!, key!, args!, rulesToInsert, style);
   }
 }
 
@@ -230,9 +268,26 @@ export function styleToClassName(...args: IStyle[]): string {
   const registration = styleToRegistration(...args);
   if (registration) {
     applyRegistration(registration);
-
     return registration.className;
   }
 
   return '';
+}
+
+function binarySearch(sortedArray: string[], value:string) {
+  let start = 0;
+  let end = sortedArray.length - 1;
+
+  while (start <= end) {
+      let mid = Math.floor((start + end) / 2);
+      if (sortedArray[mid] === value) {
+          return mid;
+      }
+      if (value < sortedArray[mid]) {
+          end = mid - 1;
+      } else {
+          start = mid + 1;
+      }
+  }
+  return -1;
 }
