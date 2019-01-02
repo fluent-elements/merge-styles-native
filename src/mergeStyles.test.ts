@@ -1,6 +1,5 @@
 import { mergeStyles } from './mergeStyles';
 import { Stylesheet, InjectionMode } from './Stylesheet';
-import { setRTL } from './transforms/rtlifyRules';
 
 const _stylesheet: Stylesheet = Stylesheet.getInstance();
 
@@ -11,34 +10,15 @@ describe('mergeStyles', () => {
     _stylesheet.reset();
   });
 
-  afterEach(() => {
-    setRTL(false);
-  });
-
   it('can register the same static class twice', () => {
     expect(mergeStyles('a', 'a')).toEqual('a');
   });
 
   it('can register left', () => {
     mergeStyles({ left: 10 });
-    expect(_stylesheet.getRules()).toEqual('.css-0{left:10px;}');
+    expect(_stylesheet.getRules()).toEqual('.css-0{left:10;}');
   });
 
-  it('can register left in rtl', () => {
-    setRTL(true);
-    mergeStyles({ left: 10 });
-    expect(_stylesheet.getRules()).toEqual('.css-0{right:10px;}');
-  });
-
-  it('can re-register rules when rtl is flipped', () => {
-    const result1 = mergeStyles({ left: 10 });
-    expect(_stylesheet.getRules()).toEqual('.css-0{left:10px;}');
-    expect(result1).toEqual('css-0');
-    setRTL(true);
-    const result2 = mergeStyles({ left: 10 });
-    expect(_stylesheet.getRules()).toEqual('.css-0{left:10px;}.css-1{right:10px;}');
-    expect(result2).toEqual('css-1');
-  });
 
   it('can join strings', () => {
     expect(mergeStyles('a', false, null, undefined, 'b')).toEqual('a b');
@@ -53,42 +33,29 @@ describe('mergeStyles', () => {
   });
 
   it('can mix styles and classnames together', () => {
-    expect(mergeStyles('foo', { background: 'red' })).toEqual('foo css-0');
-    expect(_stylesheet.getRules()).toEqual('.css-0{background:red;}');
+    expect(mergeStyles('foo', { backgroundColor: 'red' })).toEqual('foo css-0');
+    expect(_stylesheet.getRules()).toEqual('.css-0{background-color:red;}');
   });
 
   it('can remerge styles', () => {
-    const className: string = mergeStyles({ background: 'red', color: 'black' });
+    const className: string = mergeStyles({ backgroundColor: 'red', color: 'black' });
     const newClassName = mergeStyles(className, { color: 'white' });
 
     expect(className).toEqual('css-0');
     expect(newClassName).toEqual('css-1');
-    expect(_stylesheet.getRules()).toEqual('.css-0{background:red;color:black;}' + '.css-1{background:red;color:white;}');
+    expect(_stylesheet.getRules()).toEqual('.css-0{background-color:red;color:black;}' + '.css-1{background-color:red;color:white;}');
   });
 
   it('can normalize margins', () => {
-    mergeStyles({ margin: '4px' }, { marginRight: '8px' });
-    expect(_stylesheet.getRules()).toEqual('.css-0{margin-top:4px;margin-right:8px;margin-bottom:4px;margin-left:4px;}');
+    mergeStyles({ margin: 4 }, { marginRight: 8 });
+    expect(_stylesheet.getRules()).toEqual('.css-0{margin-top:4;margin-right:8;margin-bottom:4;margin-left:4;}');
   });
 
   it('can expand className lists', () => {
-    const classes1 = mergeStyles('ms-Foo', { background: 'red' });
-    const classes2 = mergeStyles(classes1, { background: 'green' });
+    const classes1 = mergeStyles('ms-Foo', { backgroundColor: 'red' });
+    const classes2 = mergeStyles(classes1, { backgroundColor: 'green' });
 
     expect(classes2).toEqual('ms-Foo css-1');
-    expect(_stylesheet.getRules()).toEqual('.css-0{background:red;}' + '.css-1{background:green;}');
-  });
-
-  it('can register media queries', () => {
-    mergeStyles({
-      background: 'red',
-      selectors: {
-        '@media screen and (max-width: 100px)': {
-          background: 'green'
-        }
-      }
-    });
-
-    expect(_stylesheet.getRules()).toEqual('.css-0{background:red;}' + '@media screen and (max-width: 100px){.css-0{background:green;}}');
+    expect(_stylesheet.getRules()).toEqual('.css-0{background-color:red;}' + '.css-1{background-color:green;}');
   });
 });

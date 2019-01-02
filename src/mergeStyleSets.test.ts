@@ -15,12 +15,12 @@ describe('mergeStyleSets', () => {
 
   it('can merge style sets', () => {
     const fn1 = jest.fn().mockReturnValue({
-      root: { background: 'green', fontSize: 12 }
+      root: { backgroundColor: 'green', fontSize: 12 }
     });
 
     const fn2 = jest.fn().mockReturnValue({
       root: {
-        background: 'yellow',
+        backgroundColor: 'yellow',
         color: 'pink'
       }
     });
@@ -29,22 +29,18 @@ describe('mergeStyleSets', () => {
     const result = mergeStyleSets(
       empty,
       {
-        root: { background: 'red' },
-        a: { background: 'green' },
+        root: { backgroundColor: 'red' },
+        a: { backgroundColor: 'green' },
         subComponentStyles: {
           labelStyles: fn1
         }
       },
       {
-        a: { background: 'white' },
-        b: { background: 'blue' }
+        a: { backgroundColor: 'white' },
+        b: { backgroundColor: 'blue' }
       },
       {
-        root: {
-          selectors: {
-            ':hover': { background: 'yellow' }
-          }
-        },
+        root: { backgroundColor: 'yellow' },
         subComponentStyles: {
           labelStyles: fn2
         }
@@ -57,11 +53,11 @@ describe('mergeStyleSets', () => {
     expect(result.subComponentStyles).toBeDefined();
     const mergedLabelStyles = result.subComponentStyles!.labelStyles({});
     expect(mergedLabelStyles).toEqual({
-      root: [{ background: 'green', fontSize: 12 }, { background: 'yellow', color: 'pink' }]
+      root: [{ backgroundColor: 'green', fontSize: 12 }, { backgroundColor: 'yellow', color: 'pink' }]
     });
 
     expect(_stylesheet.getRules()).toEqual(
-      '.root-0{background:red;}.root-0:hover{background:yellow;}' + '.a-1{background:white;}' + '.b-2{background:blue;}'
+      '.root-0{background-color:yellow;}' + '.a-1{background-color:white;}' + '.b-2{background-color:blue;}'
     );
   });
 
@@ -69,13 +65,13 @@ describe('mergeStyleSets', () => {
     const result = mergeStyleSets(
       undefined,
       {
-        root: { background: 'red' },
-        a: { background: 'green' }
+        root: { backgroundColor: 'red' },
+        a: { backgroundColor: 'green' }
       },
       null,
       {
-        a: { background: 'white' },
-        b: { background: 'blue' }
+        a: { backgroundColor: 'white' },
+        b: { backgroundColor: 'blue' }
       }
     );
 
@@ -83,7 +79,7 @@ describe('mergeStyleSets', () => {
     expect(result.a).toBe('a-1');
     expect(result.b).toBe('b-2');
 
-    expect(_stylesheet.getRules()).toEqual('.root-0{background:red;}' + '.a-1{background:white;}' + '.b-2{background:blue;}');
+    expect(_stylesheet.getRules()).toEqual('.root-0{background-color:red;}' + '.a-1{background-color:white;}' + '.b-2{background-color:blue;}');
   });
 
   it('can merge correctly when all inputs are falsey', () => {
@@ -95,95 +91,33 @@ describe('mergeStyleSets', () => {
     expect(_stylesheet.getRules()).toBe('');
   });
 
-  it('can expand child selectors', () => {
-    const result = mergeStyleSets({
-      a: {
-        selectors: {
-          ':hover $b': {
-            background: 'green'
-          },
-          ':focus $c-foo': {
-            background: 'red'
-          },
-          ':active .d': {
-            background: 'pink'
-          }
-        }
-      },
-      b: {
-        background: 'blue'
-      },
-      'c-foo': {}
-    });
-
-    expect(result).toEqual({
-      a: 'a-0',
-      b: 'b-1',
-      'c-foo': 'c-foo-2',
-      subComponentStyles: {}
-    });
-
-    expect(_stylesheet.getRules()).toEqual(
-      '.a-0:hover .b-1{background:green;}' +
-        '.a-0:focus .c-foo-2{background:red;}' +
-        '.a-0:active .d{background:pink;}' +
-        '.b-1{background:blue;}'
-    );
-  });
-
-  it('can expand child selectors with static class names', () => {
-    const styles = mergeStyleSets({
-      root: [
-        'a',
-        {
-          selectors: {
-            '&:hover $child': { background: 'red' }
-          }
-        }
-      ],
-      child: [
-        'd',
-        {
-          background: 'green'
-        }
-      ]
-    });
-
-    expect(styles).toEqual({
-      root: 'a root-0',
-      child: 'd child-1',
-      subComponentStyles: {}
-    });
-    expect(_stylesheet.getRules()).toEqual('.root-0:hover .child-1{background:red;}' + '.child-1{background:green;}');
-  });
-
   it('can merge class names', () => {
-    expect(mergeStyleSets({ root: ['a', 'b', { background: 'red' }] })).toEqual({
+    expect(mergeStyleSets({ root: ['a', 'b', { backgroundColor: 'red' }] })).toEqual({
       root: 'a b root-0',
       subComponentStyles: {}
     });
   });
 
   it('can auto expand a previously registered style', () => {
-    const styles = mergeStyleSets({ root: { background: 'red' } });
-    const styles2 = mergeStyleSets({ root: [{ background: 'purple' }, styles.root] });
+    const styles = mergeStyleSets({ root: { backgroundColor: 'red' } });
+    const styles2 = mergeStyleSets({ root: [{ backgroundColor: 'purple' }, styles.root] });
 
     expect(styles.root).toEqual(styles2.root);
 
-    expect(_stylesheet.getRules()).toEqual('.root-0{background:red;}');
+    expect(_stylesheet.getRules()).toEqual('.root-0{background-color:red;}');
   });
 
   it('can normalize duplicate static class names', () => {
-    const styles = mergeStyleSets({ root: ['a', { background: 'red' }] });
+    const styles = mergeStyleSets({ root: ['a', { backgroundColor: 'red' }] });
     const styles1 = mergeStyleSets(styles, styles);
 
     expect(styles1).toEqual({ root: 'a root-0', subComponentStyles: {} });
   });
 
   it('can auto expand a previously registered style embedded in static classname', () => {
-    const styles = mergeStyleSets({ root: ['a', { background: 'red' }] });
-    const styles2 = mergeStyleSets({ root: ['b', { background: 'purple' }] }, styles);
-    const styles3 = mergeStyleSets(styles, { root: ['b', { background: 'purple' }] });
+    const styles = mergeStyleSets({ root: ['a', { backgroundColor: 'red' }] });
+    const styles2 = mergeStyleSets({ root: ['b', { backgroundColor: 'purple' }] }, styles);
+    const styles3 = mergeStyleSets(styles, { root: ['b', { backgroundColor: 'purple' }] });
     const styles4 = mergeStyleSets(styles, styles2, styles3, { root: 'c' });
 
     expect(styles).toEqual({ root: 'a root-0', subComponentStyles: {} });
@@ -194,14 +128,14 @@ describe('mergeStyleSets', () => {
 
   it('can merge two sets with class names', () => {
     const styleSet1 = mergeStyleSets({
-      root: ['ms-Foo', { background: 'red' }]
+      root: ['ms-Foo', { backgroundColor: 'red' }]
     });
     const styleSet2 = mergeStyleSets(styleSet1, {
-      root: ['ms-Bar', { background: 'green' }]
+      root: ['ms-Bar', { backgroundColor: 'green' }]
     });
 
     expect(styleSet2).toEqual({ root: 'ms-Foo ms-Bar root-1', subComponentStyles: {} });
-    expect(_stylesheet.getRules()).toEqual('.root-0{background:red;}' + '.root-1{background:green;}');
+    expect(_stylesheet.getRules()).toEqual('.root-0{background-color:red;}' + '.root-1{background-color:green;}');
   });
 
   describe('typings tests', () => {
@@ -242,12 +176,12 @@ describe('mergeStyleSets', () => {
 
     const getStyles = (): IStyles => ({
       root: {
-        background: 'red'
+        backgroundColor: 'red'
       },
       subComponentStyles: {
         button: () => ({
           root: {
-            background: 'green'
+            backgroundColor: 'green'
           }
         })
       }
@@ -274,12 +208,12 @@ describe('mergeStyleSets', () => {
     describe('IStylesWithStyleObjectAsSubCommponent', () => {
       const getStyles2 = (): IStylesWithStyleObjectAsSubCommponent => ({
         root: {
-          background: 'red'
+          backgroundColor: 'red'
         },
         subComponentStyles: {
           button: {
             root: {
-              background: 'green'
+              backgroundColor: 'green'
             }
           }
         }

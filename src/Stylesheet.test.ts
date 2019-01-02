@@ -11,20 +11,9 @@ describe('Stylesheet', () => {
   });
 
   it('supports overriding the default prefix', () => {
-    const className = styleToClassName({ background: 'red' });
+    const className = styleToClassName({ backgroundColor: 'red' });
 
     expect(className).toEqual('myCss-0');
-    expect(_stylesheet.getRules()).toEqual('.myCss-0{background:red;}');
-  });
-
-  it('recreates a new instance when global mismatches', () => {
-    const originalStylesheet = Stylesheet.getInstance();
-
-    expect(Stylesheet.getInstance()).toBe(originalStylesheet);
-
-    // tslint:disable-next-line:no-any
-    (originalStylesheet as any)._lastStyleElement = { ownerDocument: {} };
-
-    expect(Stylesheet.getInstance()).not.toBe(originalStylesheet);
+    expect(_stylesheet.getRules()).toEqual('.myCss-0{background-color:red;}');
   });
 });
