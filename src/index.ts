@@ -12,10 +12,4 @@ export { mergeStyleSets } from './mergeStyleSets';
 
 export { concatStyleSets } from './concatStyleSets';
 
-export { fontFace } from './fontFace';
-
-export { keyframes } from './keyframes';
-
 export { IStyleSheetConfig, InjectionMode, Stylesheet } from './Stylesheet';
-
-export { setRTL } from './transforms/rtlifyRules';

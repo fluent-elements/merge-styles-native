@@ -1,5 +1,4 @@
-// tslint:disable-next-line:no-any
-declare const process: { [key: string]: any };
+declare var global: any;
 
 import { RegisteredStyle, StyleSheet as StyleSheetNative } from 'react-native';
 
@@ -56,8 +55,6 @@ export interface IStyleSheetConfig {
 
 const STYLESHEET_SETTING = '__stylesheet__';
 
-// tslint:disable-next-line:no-any
-const _fileScopedGlobal: { [key: string]: any } = {};
 let _stylesheet: Stylesheet;
 
 /**
@@ -68,29 +65,24 @@ let _stylesheet: Stylesheet;
  * @public
  */
 export class Stylesheet {
-  private _lastStyleElement?: HTMLStyleElement;
-  private _styleElement?: HTMLStyleElement;
-  private _rules: { className: string, rules: { [key: string]: any } }[] = [];
+  private _rules: { className: string; rules: { [key: string]: any } }[] = [];
   private _config: IStyleSheetConfig;
   private _counter = 0;
   private _keyToClassName: { [key: string]: string } = {};
   private _onResetCallbacks: (() => void)[] = [];
 
   // tslint:disable-next-line:no-any
-  private _classNameToArgs: { [key: string]: { args: any; rules: { [key: string]: string }, nativeStyle?: NativeStyle } } = {};
+  private _classNameToArgs: { [key: string]: { args: any; rules: { [key: string]: string }; nativeStyle?: NativeStyle } } = {};
 
   /**
    * Gets the singleton instance.
    */
   public static getInstance(): Stylesheet {
-    // tslint:disable-next-line:no-any
-    const global: any = typeof window !== 'undefined' ? window : typeof process !== 'undefined' ? process : _fileScopedGlobal;
     _stylesheet = global[STYLESHEET_SETTING] as Stylesheet;
 
-    if (!_stylesheet || (_stylesheet._lastStyleElement && _stylesheet._lastStyleElement.ownerDocument !== document)) {
+    if (!_stylesheet) {
       // tslint:disable-next-line:no-string-literal
       const fabricConfig = (global && global['FabricConfig']) || {};
-
       _stylesheet = global[STYLESHEET_SETTING] = new Stylesheet(fabricConfig.mergeStyles);
     }
 
@@ -175,7 +167,7 @@ export class Stylesheet {
   public styleFromClassName(className: string): RegisteredStyle<any> | undefined {
     const entry = this._classNameToArgs[className];
 
-    return entry && entry.nativeStyle && entry.nativeStyle.rules as any;
+    return entry && entry.nativeStyle && (entry.nativeStyle.rules as any);
   }
 
   /**
@@ -192,19 +184,12 @@ export class Stylesheet {
    * Creates a React Native style.
    */
   public createStyle(className: string, rules: { [key: string]: any }): NativeStyle | undefined {
-
     let nativeStyle: NativeStyle | undefined;
 
     switch (this._config.injectionMode) {
       case InjectionMode.insertNode:
       case InjectionMode.appendChild:
-        try {
-          nativeStyle = StyleSheetNative.create({ rules });
-        } catch (e) {
-          // The browser will throw exceptions on unsupported rules (such as a moz prefix in webkit.)
-          // We need to swallow the exceptions for this scenario, otherwise we'd need to filter
-          // which could be slower and bulkier.
-        }
+        nativeStyle = StyleSheetNative.create({ rules });
         break;
     }
 
@@ -221,14 +206,20 @@ export class Stylesheet {
    * Gets all rules registered with the stylesheet in a CSS readable format.
    */
   public getRules(): string {
-    return this._rules.map(
-      rule => Object.keys(rule.rules).length > 0 ? '.' + rule.className + 
-        JSON.stringify(rule.rules)
-          .replace(/([A-Z])/g, '-$1').toLowerCase()
-          .replace(/"/g, '')
-          .replace(/,/g, ';')
-          .replace(/}/g, ';}') : ''
-    ).join('');
+    return this._rules
+      .map(rule =>
+        Object.keys(rule.rules).length > 0
+          ? '.' +
+            rule.className +
+            JSON.stringify(rule.rules)
+              .replace(/([A-Z])/g, '-$1')
+              .toLowerCase()
+              .replace(/"/g, '')
+              .replace(/,/g, ';')
+              .replace(/}/g, ';}')
+          : ''
+      )
+      .join('');
   }
 
   /**
@@ -247,33 +238,5 @@ export class Stylesheet {
   // Forces the regeneration of incoming styles without totally resetting the stylesheet.
   public resetKeys(): void {
     this._keyToClassName = {};
-  }
-
-  private _getStyleElement(): HTMLStyleElement | undefined {
-    if (!this._styleElement && typeof document !== 'undefined') {
-      this._styleElement = this._createStyleElement();
-
-      // Reset the style element on the next frame.
-      window.requestAnimationFrame(() => {
-        this._styleElement = undefined;
-      });
-    }
-    return this._styleElement;
-  }
-
-  private _createStyleElement(): HTMLStyleElement {
-    const styleElement = document.createElement('style');
-
-    styleElement.setAttribute('data-merge-styles', 'true');
-    styleElement.type = 'text/css';
-
-    if (this._lastStyleElement && this._lastStyleElement.nextElementSibling) {
-      document.head!.insertBefore(styleElement, this._lastStyleElement.nextElementSibling);
-    } else {
-      document.head!.appendChild(styleElement);
-    }
-    this._lastStyleElement = styleElement;
-
-    return styleElement;
   }
 }

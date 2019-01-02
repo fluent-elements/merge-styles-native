@@ -19,7 +19,6 @@ describe('mergeStyles', () => {
     expect(_stylesheet.getRules()).toEqual('.css-0{left:10;}');
   });
 
-
   it('can join strings', () => {
     expect(mergeStyles('a', false, null, undefined, 'b')).toEqual('a b');
   });

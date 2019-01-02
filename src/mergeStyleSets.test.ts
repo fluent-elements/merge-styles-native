@@ -79,7 +79,9 @@ describe('mergeStyleSets', () => {
     expect(result.a).toBe('a-1');
     expect(result.b).toBe('b-2');
 
-    expect(_stylesheet.getRules()).toEqual('.root-0{background-color:red;}' + '.a-1{background-color:white;}' + '.b-2{background-color:blue;}');
+    expect(_stylesheet.getRules()).toEqual(
+      '.root-0{background-color:red;}' + '.a-1{background-color:white;}' + '.b-2{background-color:blue;}'
+    );
   });
 
   it('can merge correctly when all inputs are falsey', () => {

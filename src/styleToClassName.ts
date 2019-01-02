@@ -1,10 +1,6 @@
 import { IRawStyle, IStyle } from './IStyle';
 
 import { Stylesheet } from './Stylesheet';
-import { kebabRules } from './transforms/kebabRules';
-import { prefixRules } from './transforms/prefixRules';
-import { provideUnits } from './transforms/provideUnits';
-import { rtlifyRules } from './transforms/rtlifyRules';
 
 const DISPLAY_NAME = 'displayName';
 
@@ -119,19 +115,7 @@ function getDisplayName(rules?: IRawStyle): string | undefined {
   return rules ? rules[DISPLAY_NAME] : undefined;
 }
 
-function expandSelector(newSelector: string, currentSelector: string): string {
-  if (newSelector.indexOf(':global(') === 0) {
-    return newSelector.replace(/:global\(|\)$/g, '');
-  } else if (newSelector.indexOf(':') === 0) {
-    return currentSelector + newSelector;
-  } else if (newSelector.indexOf('&') < 0) {
-    return currentSelector + ' ' + newSelector;
-  }
-
-  return newSelector;
-}
-
-function extractRules(args: IStyle[], rules: IRules = { }): IRules {
+function extractRules(args: IStyle[], rules: IRules = {}): IRules {
   const stylesheet = Stylesheet.getInstance();
 
   for (const arg of args) {
@@ -193,35 +177,6 @@ function getKeyForRules(rules: IRules): string | undefined {
   return hasProps ? serialized.join('') : undefined;
 }
 
-export function serializeRuleEntries(ruleEntries: { [key: string]: string | number }): string {
-  if (!ruleEntries) {
-    return '';
-  }
-
-  const allEntries: (string | number)[] = [];
-
-  for (const entry in ruleEntries) {
-    if (ruleEntries.hasOwnProperty(entry) && entry !== DISPLAY_NAME && ruleEntries[entry] !== undefined) {
-      allEntries.push(entry, ruleEntries[entry]);
-    }
-  }
-
-  // Apply transforms.
-  for (let i = 0; i < allEntries.length; i += 2) {
-    kebabRules(allEntries, i);
-    provideUnits(allEntries, i);
-    rtlifyRules(allEntries, i);
-    prefixRules(allEntries, i);
-  }
-
-  // Apply punctuation.
-  for (let i = 1; i < allEntries.length; i += 4) {
-    allEntries.splice(i, 1, ':', allEntries[i], ';');
-  }
-
-  return allEntries.join('');
-}
-
 export interface IRegistration {
   className: string;
   key: string;
@@ -274,20 +229,20 @@ export function styleToClassName(...args: IStyle[]): string {
   return '';
 }
 
-function binarySearch(sortedArray: string[], value:string) {
+function binarySearch(sortedArray: string[], value: string) {
   let start = 0;
   let end = sortedArray.length - 1;
 
   while (start <= end) {
-      let mid = Math.floor((start + end) / 2);
-      if (sortedArray[mid] === value) {
-          return mid;
-      }
-      if (value < sortedArray[mid]) {
-          end = mid - 1;
-      } else {
-          start = mid + 1;
-      }
+    let mid = Math.floor((start + end) / 2);
+    if (sortedArray[mid] === value) {
+      return mid;
+    }
+    if (value < sortedArray[mid]) {
+      end = mid - 1;
+    } else {
+      start = mid + 1;
+    }
   }
   return -1;
 }
