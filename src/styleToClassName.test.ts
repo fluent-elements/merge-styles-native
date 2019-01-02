@@ -1,8 +1,6 @@
 import { InjectionMode, Stylesheet } from './Stylesheet';
 
-import { setRTL } from './transforms/rtlifyRules';
 import { styleToClassName } from './styleToClassName';
-import { renderStatic } from './server';
 
 const _stylesheet: Stylesheet = Stylesheet.getInstance();
 
@@ -101,5 +99,14 @@ describe('styleToClassName', () => {
     });
 
     expect(_stylesheet.getRules()).toEqual('.css-0{background-color:red;}');
+  });
+
+  it('filters none React Native properties', () => {
+    styleToClassName({
+      background: 'red',
+      backgroundColor: 'green'
+    });
+
+    expect(_stylesheet.getRules()).toEqual('.css-0{background-color:green;}');
   });
 });
