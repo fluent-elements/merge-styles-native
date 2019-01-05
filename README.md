@@ -1,6 +1,100 @@
 This is a fork of the `merge-styles` package from Office UI Fabric for React Native.
 
-**Work in progress! Do not use yet!**
+It provides a comptible API and enables code sharing between Office UI Fabric and React Native.
+
+Also it enables React Native components to be styled with style sets.
+
+# API
+
+In addition to the official merge-styles API (see below) the following API is provided:
+
+## class Stylesheet
+
+**public getStyle(...classNames: string[])**
+
+Returns an arrray of React Native styles that can be passed to component's style property.
+
+Each element of `classNames` can containt multiple class names separated by a space character similiar to HTML and CSS.
+
+i.e. `classNames("a", "b")` is the same as `classNames("a b")`
+
+# Breaking changes
+
+Registering fonts, keyframes, RTL support and server side rendering were removed as they do not apply to React Native.
+
+Selectors and media queries are ignored.
+
+# Example usage with React Native
+
+```
+import { mergeStyles, Stylesheet } from 'merge-styles-native';
+
+const stylesheet = Stylesheet.getInstance();
+
+const containerStyle = mergeStyles({
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: '#F5FCFF'
+});
+
+const textStyle = mergeStyles({
+  textAlign: 'center'
+});
+
+const welcomeStyle = mergeStyles(
+  textStyle,
+  {
+    fontSize: 20,
+    margin: 10
+  }
+);
+
+const instructionsStyle = mergeStyles(
+  textStyle,
+  {
+    marginBottom: 5
+  }
+);
+
+const redStyle = mergeStyles({
+  color: '#aa3333'
+});
+
+const blueStyle = mergeStyles({
+  color: '#3333aa'
+});
+
+const instructions = Platform.select({
+  ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
+  android:
+    'Double tap R on your keyboard to reload,\n' +
+    'Shake or press menu button for dev menu',
+});
+
+interface Props {}
+
+export default class App extends Component<Props> {
+  render() {
+    return (
+      <View style={stylesheet.getStyle(containerStyle)}>
+        <Text style={stylesheet.getStyle(welcomeStyle)}>Welcome to React Native!</Text>
+        <Text style={stylesheet.getStyle(instructionsStyle, blueStyle)}>To get started, edit App.tsx.</Text>
+        <Text style={stylesheet.getStyle(instructionsStyle + ' ' + redStyle)}>{instructions}</Text>
+      </View>
+    );
+  }
+}
+```
+
+See: [merge-styles-example-native](https://github.com/fluent-elements/merge-styles-example-native)
+
+# Important
+
+The style type definitions are from merge-styles for HTML and CSS so you can only use style properties that are common between HTML and React Native. This might change in the future.
+
+React Native style properties are filtered before they are registered with React Native's Stylesheet.
+
 
 # [merge-styles](http://dev.office.com/fabric)
 
