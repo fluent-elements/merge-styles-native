@@ -239,4 +239,20 @@ export class Stylesheet {
   public resetKeys(): void {
     this._keyToClassName = {};
   }
+
+  /**
+   * Returns an arrray of React Native styles that can be passed to the style property.
+   */
+  public getStyle(...classNames: string[]) {
+    let styles: RegisteredStyle<any>[] = [];
+    for (const className of classNames) {
+      className.split(' ').forEach(name => {
+        const style = this.styleFromClassName(name);
+        if (style) {
+          styles.push(style);
+        }
+      });
+    }
+    return styles;
+  }
 }
